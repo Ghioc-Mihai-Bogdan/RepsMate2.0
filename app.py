@@ -1,9 +1,25 @@
 import streamlit as st
+from hr_agent import HRAgent
 
-# Set Streamlit page configuration (must be first Streamlit command)
 st.set_page_config(page_title="Custom Menu", layout="wide")
 
-# Inject CSS for custom styles (menu icons, banner, separator, etc.)
+# Initialize session state variables
+if 'page' not in st.session_state:
+    st.session_state['page'] = 'main'
+
+if 'hr_agent' not in st.session_state:
+    st.session_state.hr_agent = HRAgent()
+
+if 'processing' not in st.session_state:
+    st.session_state.processing = False
+
+if 'messages' not in st.session_state:
+    st.session_state.messages = []
+
+if 'input_key' not in st.session_state:
+    st.session_state.input_key = 0
+
+# Inject highly specific CSS for menu icon buttons at the very top
 st.markdown('''
     <style>
     /* Make all Streamlit menu icon buttons and their emoji much larger */
@@ -24,62 +40,10 @@ st.markdown('''
         align-items: center !important;
         justify-content: center !important;
     }
-    .banner {
-        padding: 1rem;
-        border-radius: 10px;
-        margin: 0.5rem;
-        margin-top: 0;
-    }
-    .banner-text {
-        font-size: 2.7rem !important;
-        line-height: 1.3 !important;
-        color: #fff;
-        margin-bottom: 1.2rem;
-    }
-    .banner-text ul, .banner-text li {
-        font-size: 6.4rem !important;
-    }
-    .reminders-container {
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
-        margin-top: 0.5rem;
-        margin-bottom: 0;
-    }
-    .reminders-title {
-        font-size:2.2rem;font-weight:800;color:#fff;margin-top:0.5rem;margin-bottom:0.5rem;
-    }
-    .stTextArea {
-        min-height: 80px;
-        height: 120px !important;
-        max-height: 300px;
-    }
-    .menu-col {
-        min-width: 120px;
-        max-width: 180px;
-    }
-    .separator-col {
-        display: flex;
-        align-items: stretch;
-        justify-content: center;
-    }
-    .separator-line {
-        width: 2px;
-        background: #d3d3d3;
-        height: 1100px;
-        margin: 0 auto;
-        border-radius: 2px;
-    }
-    #repsmate-title {
-        font-size: 6rem !important;
-        font-weight: 700 !important;
-        margin-bottom: 1.5rem;
-    }
     </style>
 ''', unsafe_allow_html=True)
 
-# --- PAGE NAVIGATION STATE ---
-# Use session state to keep track of which page is active (main or brain)
+# Page navigation using session state
 if 'page' not in st.session_state:
     st.session_state['page'] = 'main'
 
@@ -89,17 +53,141 @@ def go_to_brain():
 def go_to_main():
     st.session_state['page'] = 'main'
 
-# --- LAYOUT COLUMNS ---
-# menu_col: left menu with navigation buttons
-# content_col: main content area
-# separator_col: vertical line separator
-# banner_col: right-side banner with vision and reminders
+st.markdown("""
+<style>
+html, body, [data-testid="stAppViewContainer"] {
+    height: 100vh !important;
+    overflow: auto !important;
+}
+[data-testid="stAppViewContainer"] > .main {
+    height: 100vh !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.flex-content-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    height: 100%;
+    min-height: 0;
+}
+.big-icon {
+    font-size: 80px;
+    display: block;
+    margin-bottom: 40px;
+    margin-top: 10px;
+    cursor: pointer;
+}
+.menu-col {
+    min-width: 120px;
+    max-width: 180px;
+}
+.menu-col .stButton > button, .stButton > button[data-testid^="chat_icon"], .stButton > button[data-testid^="brain_icon"] {
+    font-size: 10.5rem !important;
+    height: 330px !important;
+    width: 330px !important;
+    line-height: 1 !important;
+}
+.separator-col {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+}
+.separator-line {
+    width: 2px;
+    background: #d3d3d3;
+    height: 1100px;
+    margin: 0 auto;
+    border-radius: 2px;
+}
+/* Make title bigger */
+#repsmate-title {
+    font-size: 3.5rem !important;
+    font-weight: 900 !important;
+    margin-bottom: 1.5rem;
+}
+/* Make body and label text bigger */
+.big-body {
+    font-size: 1.5rem !important;
+    margin-bottom: 1rem;
+}
+.big-label {
+    font-size: 1.2rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.5rem;
+}
+/* Make input and output text bigger */
+input, .stTextInput > div > input {
+    font-size: 1.3rem !important;
+}
+.stMarkdown p, .stTextInput, .stTextInput label, .stTextInput div {
+    font-size: 1.3rem !important;
+}
+.stButton > button {
+    font-size: 80px !important;
+    height: 100px !important;
+    width: 100px !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    text-align: left !important;
+    margin-bottom: 40px !important;
+    margin-top: 10px !important;
+    padding: 0 !important;
+    display: block !important;
+}
+#bottom-chat-container {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 32px;
+    z-index: 10;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100vw;
+}
+.banner {
+    padding: 1rem;
+    border-radius: 10px;
+    margin: 0.5rem;
+    margin-top: 0;
+}
+.banner-text {
+    font-size: 2.7rem !important;
+    line-height: 1.3 !important;
+    color: #fff;
+    margin-bottom: 1.2rem;
+}
+.banner-text ul, .banner-text li {
+    font-size: 2.2rem !important;
+}
+.banner-text b {
+    font-size: 3rem !important;
+}
+.reminders-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+}
+.reminders-title {
+    font-size:2.2rem;font-weight:800;color:#fff;margin-top:0.5rem;margin-bottom:0.5rem;
+}
+.stTextArea {
+    min-height: 80px;
+    height: 120px !important;
+    max-height: 150px;
+}
+</style>
+""", unsafe_allow_html=True)
+
 menu_col, content_col, separator_col, banner_col = st.columns([1, 3, 0.05, 1])
 
-# --- MENU COLUMN ---
 with menu_col:
-    # Navigation buttons (💬 for main, 🧠 for brain/add info)
-    st.markdown('<style>.stButton > button { font-size: 8rem !important; height: 180px !important; width: 180px !important; line-height: 1 !important; }</style>', unsafe_allow_html=True)
     if st.session_state['page'] == 'main':
         if st.button('💬', key='chat_icon', help='Main', use_container_width=True, type='secondary'):
             st.session_state['page'] = 'main'
@@ -111,29 +199,47 @@ with menu_col:
         if st.button('🧠', key='brain_icon_back', help='Add Info', use_container_width=True, type='secondary'):
             st.session_state['page'] = 'brain'
 
-# --- SEPARATOR COLUMN ---
-with separator_col:
-    # Vertical line to visually separate menu and content
-    st.markdown('<div class="separator-line"></div>', unsafe_allow_html=True)
-
-# --- MAIN CONTENT COLUMN ---
 if st.session_state['page'] == 'main':
     with content_col:
-        # Main chat UI
         st.markdown('<div class="flex-content-col">', unsafe_allow_html=True)
         st.markdown('<div>', unsafe_allow_html=True)
-        # Main title
-        st.markdown('<div id="repsmate-title">Repcore</div>', unsafe_allow_html=True)
+        st.markdown('<div id="repsmate-title">Repcore HR Assistant</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
-        # Chat input area (moved down by 1000px)
+        
+        # Display chat history
+        for message in st.session_state.messages:
+            if message["role"] == "user":
+                st.markdown(f'<div style="text-align: right; margin: 10px 0;"><div style="background-color: #e6f2fa; padding: 10px; border-radius: 10px; display: inline-block;">{message["content"]}</div></div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div style="text-align: left; margin: 10px 0;"><div style="background-color: #f0f0f0; padding: 10px; border-radius: 10px; display: inline-block;">{message["content"]}</div></div>', unsafe_allow_html=True)
+        
+        # Place the label and input in a fixed-position container
         st.markdown('<div id="bottom-chat-container" style="margin-top:1000px;">', unsafe_allow_html=True)
         st.markdown('<div class="big-label" style="text-align:left;">Type here</div>', unsafe_allow_html=True)
-        user_input = st.text_input("Ask me", label_visibility="collapsed", key="main_chat_input")
+        
+        # Chat input with dynamic key
+        user_input = st.text_input("Ask me", label_visibility="collapsed", key=f"main_chat_input_{st.session_state.input_key}")
+        
+        if user_input:
+            # Add user message to display
+            st.session_state.messages.append({"role": "user", "content": user_input})
+            
+            # Get response from HR agent
+            response = st.session_state.hr_agent.get_response(user_input)
+            
+            # Add assistant response to display
+            st.session_state.messages.append({"role": "assistant", "content": response})
+            
+            # Increment input key to clear the input
+            st.session_state.input_key += 1
+            
+            # Rerun to update the display
+            st.rerun()
+            
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 else:
     with content_col:
-        # Add Info page UI
         st.markdown('<div class="flex-content-col">', unsafe_allow_html=True)
         st.markdown('<div>', unsafe_allow_html=True)
         st.markdown('<div id="repsmate-title">Add Info</div>', unsafe_allow_html=True)
@@ -144,9 +250,10 @@ else:
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-# --- BANNER COLUMN (RIGHT SIDE) ---
+with separator_col:
+    st.markdown('<div class="separator-line"></div>', unsafe_allow_html=True)
+
 with banner_col:
-    # Company Vision section
     st.markdown('<div class="banner" style="margin-top:0;">', unsafe_allow_html=True)
     st.markdown('<div style="font-size:3.2rem;font-weight:900;color:#fff;margin-bottom:1.5rem;">Company Vision</div>', unsafe_allow_html=True)
     st.markdown('<div class="banner-text">', unsafe_allow_html=True)
@@ -163,7 +270,7 @@ with banner_col:
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Reminders section (editable text area)
+    # Reminders section
     st.markdown('<div class="reminders-container">', unsafe_allow_html=True)
     st.markdown('<div class="reminders-title">Reminders</div>', unsafe_allow_html=True)
     reminders = st.text_area("Add or edit reminders here...", key="reminders_section", height=600, label_visibility="collapsed")
