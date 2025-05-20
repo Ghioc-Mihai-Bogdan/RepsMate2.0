@@ -1,6 +1,23 @@
 import streamlit as st
+from hr_agent import HRAgent
 
 st.set_page_config(page_title="Custom Menu", layout="wide")
+
+# Initialize session state variables
+if 'page' not in st.session_state:
+    st.session_state['page'] = 'main'
+
+if 'hr_agent' not in st.session_state:
+    st.session_state.hr_agent = HRAgent()
+
+if 'processing' not in st.session_state:
+    st.session_state.processing = False
+
+if 'messages' not in st.session_state:
+    st.session_state.messages = []
+
+if 'input_key' not in st.session_state:
+    st.session_state.input_key = 0
 
 # Inject highly specific CSS for menu icon buttons at the very top
 st.markdown('''
@@ -186,12 +203,39 @@ if st.session_state['page'] == 'main':
     with content_col:
         st.markdown('<div class="flex-content-col">', unsafe_allow_html=True)
         st.markdown('<div>', unsafe_allow_html=True)
-        st.markdown('<div id="repsmate-title">Repcore</div>', unsafe_allow_html=True)
+        st.markdown('<div id="repsmate-title">Repcore HR Assistant</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Display chat history
+        for message in st.session_state.messages:
+            if message["role"] == "user":
+                st.markdown(f'<div style="text-align: right; margin: 10px 0;"><div style="background-color: #e6f2fa; padding: 10px; border-radius: 10px; display: inline-block;">{message["content"]}</div></div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div style="text-align: left; margin: 10px 0;"><div style="background-color: #f0f0f0; padding: 10px; border-radius: 10px; display: inline-block;">{message["content"]}</div></div>', unsafe_allow_html=True)
+        
         # Place the label and input in a fixed-position container
         st.markdown('<div id="bottom-chat-container" style="margin-top:1000px;">', unsafe_allow_html=True)
         st.markdown('<div class="big-label" style="text-align:left;">Type here</div>', unsafe_allow_html=True)
-        user_input = st.text_input("Ask me", label_visibility="collapsed", key="main_chat_input")
+        
+        # Chat input with dynamic key
+        user_input = st.text_input("Ask me", label_visibility="collapsed", key=f"main_chat_input_{st.session_state.input_key}")
+        
+        if user_input:
+            # Add user message to display
+            st.session_state.messages.append({"role": "user", "content": user_input})
+            
+            # Get response from HR agent
+            response = st.session_state.hr_agent.get_response(user_input)
+            
+            # Add assistant response to display
+            st.session_state.messages.append({"role": "assistant", "content": response})
+            
+            # Increment input key to clear the input
+            st.session_state.input_key += 1
+            
+            # Rerun to update the display
+            st.rerun()
+            
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 else:
