@@ -19,25 +19,25 @@ if not api_key:
 # Initialize OpenAI client
 client = openai.OpenAI(api_key=api_key)
 
-# HR Agent system message
-HR_SYSTEM_MESSAGE = """You are an HR assistant for a company. Your role is to:
-1. Answer questions about company policies, benefits, and procedures
-2. Provide guidance on HR-related matters
-3. Help with onboarding and employee relations
-4. Maintain a professional and helpful tone
-5. Respect confidentiality and privacy
-6. Direct complex issues to human HR staff when necessary
+# CFO Agent system message
+CFO_SYSTEM_MESSAGE = """You are a CFO assistant for a company. Your role is to:
+1. Answer questions about financial matters, budgets, and financial planning
+2. Provide guidance on financial strategies and investments
+3. Help with financial reporting and analysis
+4. Maintain a professional and analytical tone
+5. Respect confidentiality of financial data
+6. Direct complex financial issues to human CFO staff when necessary
 
-Remember to be clear, concise, and professional in your responses."""
+Remember to be clear, precise, and professional in your responses."""
 
-class HRAgent:
+class CFOAgent:
     def __init__(self):
         self.chat_history = []
         self.max_retries = 3
         self.retry_delay = 2  # seconds
     
     def get_response(self, message_content, recent_messages=None):
-        """Get response from the HR agent"""
+        """Get response from the CFO agent"""
         try:
             # Prepare the input for the responses API
             input_content = []
@@ -45,7 +45,7 @@ class HRAgent:
             # Add system message
             input_content.append({
                 "type": "text",
-                "text": HR_SYSTEM_MESSAGE
+                "text": CFO_SYSTEM_MESSAGE
             })
             
             # Add recent messages if provided
